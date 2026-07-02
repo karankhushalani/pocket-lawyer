@@ -12,6 +12,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Search, ChevronDown, ChevronRight, MessageSquare } from "lucide-react-native";
 import { api } from "../../services/api";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
+import { EmptyState } from "../../components/EmptyState";
 
 interface ActSection {
   act_name: string;
@@ -92,6 +93,7 @@ export default function ActSectionsScreen() {
           onChangeText={setFilter}
           placeholder="Filter sections..."
           placeholderTextColor="#5a7082"
+          returnKeyType="search"
           className="flex-1 text-white py-2.5 text-[14px]"
         />
         {filter.length > 0 && (
@@ -173,17 +175,11 @@ export default function ActSectionsScreen() {
           />
         }
         ListEmptyComponent={
-          <View className="items-center justify-center py-16">
-            <Search size={32} color="#c9a84c" className="mb-3" />
-            <Text className="text-white font-bold text-base">
-              {filter ? "No sections match your filter" : "No sections found"}
-            </Text>
-            <Text className="text-muted text-sm text-center mt-1">
-              {filter
-                ? "Try a different search term."
-                : `No sections available for ${act_short?.toUpperCase()}.`}
-            </Text>
-          </View>
+          <EmptyState
+            icon="search"
+            title={filter ? "No sections match your filter" : "No sections found"}
+            subtitle={filter ? "Try a different search term." : `No sections available for ${act_short?.toUpperCase()}.`}
+          />
         }
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32 }}

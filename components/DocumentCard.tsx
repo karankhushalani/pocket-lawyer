@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { Calendar } from "lucide-react-native";
+import { impactLight } from "../lib/haptics";
 
 interface DocumentCardProps {
   id: string;
@@ -62,9 +63,9 @@ export function DocumentCard({
               {title}
             </Text>
             {risk_flag_count > 0 && (
-              <View className="bg-red-600/20 border border-red-500/40 rounded-full px-2 py-0.5">
+              <TouchableOpacity onPress={impactLight} className="bg-red-600/20 border border-red-500/40 rounded-full px-2 py-0.5">
                 <Text className="text-red-400 text-[10px] font-bold">{risk_flag_count} risk</Text>
-              </View>
+              </TouchableOpacity>
             )}
           </View>
           <View className="flex-row items-center gap-2">

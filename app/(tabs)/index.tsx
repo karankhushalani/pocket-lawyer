@@ -1,11 +1,11 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React from "react";
 import { View, Text, FlatList, TouchableOpacity, RefreshControl } from "react-native";
 import { useRouter } from "expo-router";
 import { Plus, FileText, MessageSquare } from "lucide-react-native";
-import { api } from "../../services/api";
 import { useAuthStore } from "../../store/useAuthStore";
-import { Document } from "../../types";
+import { useDocuments } from "../../hooks/useQueries";
 import { DocumentCard } from "../../components/DocumentCard";
+import { EmptyState } from "../../components/EmptyState";
 
 function SkeletonCard() {
   return (
@@ -19,41 +19,11 @@ function SkeletonCard() {
 }
 
 export default function HomeScreen() {
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [chatCount, setChatCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const { data: documents = [], isLoading, refetch, isRefetching } = useDocuments();
   const user = useAuthStore((s) => s.user);
   const router = useRouter();
-
-  const fetchData = useCallback(async (showLoader = true) => {
-    if (showLoader) setLoading(true);
-    try {
-      const [docRes, chatRes] = await Promise.all([
-        api.get("/documents/"),
-        api.get("/chat/messages").catch(() => ({ data: [] as any[] })),
-      ]);
-      setDocuments(docRes.data);
-      setChatCount(chatRes.data.length);
-    } catch {
-      setDocuments([]);
-      setChatCount(0);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const handleRefresh = () => {
-    setRefreshing(true);
-    fetchData(false);
-  };
-
   const avatarLetter = user?.name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || "?";
+  const chatCount = 0;
 
   return (
     <View className="flex-1 bg-background">
@@ -67,7 +37,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {loading && documents.length === 0 ? (
+      {isLoading && documents.length === 0 ? (
         <View className="flex-1 px-4 pt-4">
           <View className="flex-row gap-3 mb-5">
             <View className="flex-1 bg-surface/60 border border-border/20 rounded-xl p-4">
@@ -120,18 +90,14 @@ export default function HomeScreen() {
             </View>
           }
           ListEmptyComponent={
-            <View className="items-center justify-center px-8 pt-16">
-              <FileText size={40} color="#c9a84c" className="mb-4" />
-              <Text className="text-white font-bold text-lg text-center">
-                No documents yet
-              </Text>
-              <Text className="text-muted text-sm text-center mt-2 leading-5">
-                Tap + to analyze your first legal document.
-              </Text>
-            </View>
+            <EmptyState
+              icon="documents"
+              title="No documents yet"
+              subtitle="Tap + to analyze your first legal document."
+            />
           }
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#c9a84c" />
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#c9a84c" />
           }
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 96 }}

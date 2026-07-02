@@ -13,22 +13,58 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.pocketlawyer.app"
+      "bundleIdentifier": "com.pocketlawyer.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Pocket Lawyer needs camera access to photograph legal documents for AI-powered analysis.",
+        "NSPhotoLibraryUsageDescription": "Pocket Lawyer needs photo library access to select legal documents for AI-powered analysis."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0f1923"
       },
-      "package": "com.pocketlawyer.app"
+      "package": "com.pocketlawyer.app",
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "extra": {
+      "eas": {
+        "projectId": "your-eas-project-id"
+      }
+    },
     "plugins": [
       "expo-router",
-      "@react-native-firebase/app",
-      "@react-native-firebase/auth"
+      [
+        "@react-native-firebase/app",
+        {
+          "android": {
+            "googleServicesFile": "./google-services.json"
+          }
+        }
+      ],
+      "@react-native-firebase/auth",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Pocket Lawyer needs camera access to photograph legal documents for AI-powered analysis.",
+          "photosPermission": "Pocket Lawyer needs photo library access to select legal documents for AI-powered analysis."
+        }
+      ],
+      [
+        "expo-document-picker",
+        {
+          "iCloudContainerEnvironment": "Production"
+        }
+      ]
     ],
     "scheme": "pocketlawyer"
   }

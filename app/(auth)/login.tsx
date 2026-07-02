@@ -93,6 +93,7 @@ export default function LoginScreen() {
                 placeholderTextColor="#5a7082"
                 autoCapitalize="none"
                 keyboardType="email-address"
+                returnKeyType="next"
                 className="flex-1 text-white py-2 text-[15px]"
               />
             </View>
@@ -111,6 +112,8 @@ export default function LoginScreen() {
                 placeholder="••••••••"
                 placeholderTextColor="#5a7082"
                 autoCapitalize="none"
+                returnKeyType="go"
+                onSubmitEditing={handleEmail}
                 className="flex-1 text-white py-2 text-[15px]"
               />
             </View>

@@ -23,6 +23,9 @@ import {
   ExternalLink,
   X,
 } from "lucide-react-native";
+import { useUploadDocument } from "../../hooks/useQueries";
+import { notificationSuccess, notificationError, impactMedium } from "../../lib/haptics";
+import { showSuccess, showError } from "../../lib/toast";
 import { api } from "../../services/api";
 
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -122,6 +125,7 @@ export default function DocumentUploadScreen() {
   const [expandedClauses, setExpandedClauses] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  const uploadMutation = useUploadDocument();
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -249,11 +253,9 @@ export default function DocumentUploadScreen() {
     setErrorMsg("");
 
     try {
-      await new Promise((r) => setTimeout(r, 800));
-
       setStatusText("Extracting text...");
       setPhase("extracting");
-      await new Promise((r) => setTimeout(r, 1000));
+      await new Promise((r) => setTimeout(r, 600));
 
       setStatusText("Analyzing with AI...");
       setPhase("analyzing");
@@ -265,13 +267,13 @@ export default function DocumentUploadScreen() {
         type: file.mimeType,
       } as any);
 
-      const response = await api.post("/documents/upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-        timeout: 120000,
-      });
+      const response = await uploadMutation.mutateAsync(formData);
 
       setPhase("done");
-      setResult(response.data);
+      setResult(response);
+      notificationSuccess();
+      showSuccess("Analysis Complete", `${response.title} analyzed successfully.`);
+      impactMedium();
     } catch (err: any) {
       if (err.response?.status === 413 || err.message?.includes("413")) {
         setErrorMsg("File too large for server. Maximum 10 MB.");
@@ -282,6 +284,8 @@ export default function DocumentUploadScreen() {
       } else {
         setErrorMsg(err.message || "Upload failed. Check your connection.");
       }
+      showError("Upload Failed", err.response?.data?.detail || err.message);
+      notificationError();
       setPhase("error");
     }
   };

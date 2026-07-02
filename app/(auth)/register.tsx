@@ -80,6 +80,7 @@ export default function RegisterScreen() {
                 onChangeText={setName}
                 placeholder="Senior Advocate Malhotra"
                 placeholderTextColor="#5a7082"
+                returnKeyType="next"
                 className="flex-1 text-white py-2 text-[15px]"
               />
             </View>
@@ -98,6 +99,7 @@ export default function RegisterScreen() {
                 placeholderTextColor="#5a7082"
                 autoCapitalize="none"
                 keyboardType="email-address"
+                returnKeyType="next"
                 className="flex-1 text-white py-2 text-[15px]"
               />
             </View>
@@ -116,6 +118,8 @@ export default function RegisterScreen() {
                 placeholder="••••••••"
                 placeholderTextColor="#5a7082"
                 autoCapitalize="none"
+                returnKeyType="go"
+                onSubmitEditing={handleRegister}
                 className="flex-1 text-white py-2 text-[15px]"
               />
             </View>

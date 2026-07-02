@@ -13,6 +13,7 @@ import {
   Dimensions,
   Animated,
   Easing,
+  BackHandler,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -22,10 +23,13 @@ import {
   Scale,
   X,
 } from "lucide-react-native";
-import { api } from "../../services/api";
-import { ChatMessage, Document } from "../../types";
+import { useDocument, useChatHistory, useSendMessage } from "../../hooks/useQueries";
+import { showError } from "../../lib/toast";
+import { impactLight } from "../../lib/haptics";
+import { ChatMessage } from "../../types";
 import { ChatBubble } from "../../components/ChatBubble";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
+import { EmptyState } from "../../components/EmptyState";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -39,11 +43,12 @@ const SUGGESTED_QUESTIONS = [
 export default function DocumentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const [document, setDocument] = useState<Document | null>(null);
+  const { data: document, isLoading: docLoading } = useDocument(id ?? "");
+  const { data: history = [], isLoading: historyLoading } = useChatHistory(id ?? "");
+  const sendMutation = useSendMessage();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [showSources, setShowSources] = useState<{
     act_name: string;
     section: string;
@@ -51,32 +56,17 @@ export default function DocumentDetailScreen() {
   const flatListRef = useRef<FlatList>(null);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const [docRes, chatRes] = await Promise.all([
-          api.get(`/documents/${id}`),
-          api.get(`/chat/history/${id}`).catch(() => ({ data: [] })),
-        ]);
-        setDocument(docRes.data);
-        setMessages(chatRes.data);
-      } catch {
-        setDocument({
-          id: id ?? "doc-unknown",
-          title: "Shareholders Agreement",
-          file_url: "",
-          file_type: "pdf",
-          document_type: "agreement",
-          jurisdiction: "india",
-          summary:
-            "This document outlines preferential allotment, board composition, veto rights, and exit mechanisms.",
-          risk_flags: ["Unlimited liability clause", "Missing termination clause"],
-          key_clauses: null,
-          created_at: new Date().toISOString(),
-        });
-      } finally {
-        setLoading(false);
-      }
-    })();
+    setMessages(history);
+  }, [history]);
+
+  useEffect(() => {
+    if (!id) return;
+    const onBack = () => {
+      router.back();
+      return true;
+    };
+    BackHandler.addEventListener("hardwareBackPress", onBack);
+    return () => BackHandler.removeEventListener("hardwareBackPress", onBack);
   }, [id]);
 
   const handleSend = async (text?: string) => {
@@ -93,23 +83,25 @@ export default function DocumentDetailScreen() {
     };
     setMessages((prev) => [...prev, temp]);
     setSending(true);
+    impactLight();
 
     try {
-      const res = await api.post("/chat", {
+      const res = await sendMutation.mutateAsync({
         message: msg,
-        document_id: id,
+        document_id: id ?? "",
         conversation_id: "default",
       });
       const reply: ChatMessage = {
         id: `reply-${Date.now()}`,
         document_id: id ?? null,
         role: "assistant",
-        content: res.data.response,
-        sources: res.data.sources,
+        content: res.response,
+        sources: res.sources,
         created_at: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, reply]);
-    } catch {
+    } catch (err: any) {
+      showError("Chat Error", err.response?.data?.detail || "Failed to get response");
       const fallback: ChatMessage = {
         id: `reply-${Date.now()}`,
         document_id: id ?? null,
@@ -166,7 +158,7 @@ export default function DocumentDetailScreen() {
     );
   }
 
-  if (loading) return <LoadingSpinner message="Retrieving brief..." />;
+  if (docLoading || historyLoading) return <LoadingSpinner message="Retrieving brief..." />;
 
   return (
     <KeyboardAvoidingView
@@ -247,17 +239,11 @@ export default function DocumentDetailScreen() {
         }
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
-          <View className="flex-1 justify-center items-center px-6 pb-8">
-            <View className="bg-primary/40 border border-accent/20 p-3 rounded-full mb-3">
-              <Scale size={26} color="#c9a84c" />
-            </View>
-            <Text className="text-white text-base font-bold tracking-wide text-center">
-              Lex Document Counsel
-            </Text>
-            <Text className="text-muted text-sm text-center mt-2 leading-5">
-              Ask anything about this document. Lex will cite relevant statutes and flag risks.
-            </Text>
-          </View>
+          <EmptyState
+            icon="chat"
+            title="Lex Document Counsel"
+            subtitle="Ask anything about this document. Lex will cite relevant statutes and flag risks."
+          />
         }
         ListFooterComponent={<TypingIndicator />}
       />
