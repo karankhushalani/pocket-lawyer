@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -26,6 +26,43 @@ export default function LegislationScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searched, setSearched] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const doSearch = useCallback(async (q: string) => {
+    if (!q.trim()) return;
+    setLoading(true);
+    setSearched(true);
+    try {
+      const res = await api.get("/laws/search", { params: { q } });
+      setResults(res.data);
+    } catch {
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleSearchImmediate = () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    doSearch(query);
+  };
+
+  const handleChangeText = (text: string) => {
+    setQuery(text);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!text.trim()) {
+      setSearched(false);
+      setResults([]);
+      return;
+    }
+    debounceRef.current = setTimeout(() => doSearch(text), 400);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
   const fetchActs = useCallback(async (showLoader = true) => {
     if (showLoader) setLoading(true);
@@ -106,8 +143,8 @@ export default function LegislationScreen() {
         <Search size={20} color="#c9a84c" className="mr-2.5" />
         <TextInput
           value={query}
-          onChangeText={setQuery}
-          onSubmitEditing={handleSearch}
+          onChangeText={handleChangeText}
+          onSubmitEditing={handleSearchImmediate}
           placeholder="Semantic search, e.g. breach of contract"
           placeholderTextColor="#5a7082"
           returnKeyType="search"
@@ -115,7 +152,7 @@ export default function LegislationScreen() {
         />
         {query.length > 0 && (
           <TouchableOpacity
-            onPress={handleSearch}
+            onPress={handleSearchImmediate}
             className="bg-primary px-3 py-1.5 rounded-lg border border-accent/20"
           >
             <Text className="text-accent text-xs font-bold uppercase tracking-wider">Search</Text>

@@ -301,11 +301,7 @@ export default function DocumentDetailScreen() {
               input.trim() && !sending ? "bg-accent" : "bg-border/30"
             }`}
           >
-            {sending ? (
-              <ActivityIndicator size="small" color="#0f1923" />
-            ) : (
-              <Send size={18} color={input.trim() ? "#0f1923" : "#5a7082"} />
-            )}
+            <Send size={18} color={input.trim() && !sending ? "#0f1923" : "#5a7082"} />
           </TouchableOpacity>
         </View>
       </View>
