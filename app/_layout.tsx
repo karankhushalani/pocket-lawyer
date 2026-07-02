@@ -2,20 +2,15 @@ import React, { useEffect } from "react";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useAuthStore } from "../store/useAuthStore";
-import { subscribeToAuthChanges } from "../services/auth";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 
 export default function RootLayout() {
-  const { user, isLoading } = useAuthStore();
+  const { user, isLoading, hydrate } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
 
-  // Handle Auth Subscription
   useEffect(() => {
-    const unsubscribe = subscribeToAuthChanges();
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
+    hydrate();
   }, []);
 
   // Handle Route Guard/Redirects

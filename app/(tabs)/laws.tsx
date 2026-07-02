@@ -1,168 +1,230 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, FlatList, TouchableOpacity, Alert } from "react-native";
-import { Search, Scale, Landmark, ChevronRight, BookOpen } from "lucide-react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  FlatList,
+  TouchableOpacity,
+  RefreshControl,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { Search, Scale, BookOpen } from "lucide-react-native";
 import { api } from "../../services/api";
-import { LawChunk } from "../../types";
-import { LawCard } from "../../components/LawCard";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 
+interface ActSummary {
+  act_name: string;
+  act_short: string;
+  chunk_count: number;
+}
+
 export default function LegislationScreen() {
+  const router = useRouter();
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<LawChunk[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState<ActSummary[]>([]);
+  const [acts, setActs] = useState<ActSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [searched, setSearched] = useState(false);
 
-  const handleSearch = async () => {
-    if (!query.trim()) {
-      Alert.alert("Input Required", "Please enter a legal concept or section query.");
-      return;
-    }
-
-    setLoading(true);
+  const fetchActs = useCallback(async (showLoader = true) => {
+    if (showLoader) setLoading(true);
     try {
-      const response = await api.get("/laws/search", { params: { query } });
-      // The API returns { answer, sources }. If we get sources or want to construct mock hits, let's map:
-      // Real API might return raw chunks or sources count. Let's handle results accordingly.
-      
-      // Let's perform a smart mock if backend falls back, or if backend gives structured law results.
-      setResults([
-        {
-          id: "law-1",
-          act_name: "Indian Penal Code, 1860",
-          act_short: "IPC",
-          section: "Section 302 - Punishment for murder",
-          chunk_text: "Whoever commits murder shall be punished with death, or imprisonment for life, and shall also be liable to fine. Murder constitutes the intentional deprivation of human life under defined parameters.",
-        },
-        {
-          id: "law-2",
-          act_name: "Indian Contract Act, 1872",
-          act_short: "ICA",
-          section: "Section 73 - Compensation for loss or damage",
-          chunk_text: "When a contract has been broken, the party who suffers by such breach is entitled to receive, from the party who has broken the contract, compensation for any loss or damage caused to him thereby.",
-        },
-        {
-          id: "law-3",
-          act_name: "Information Technology Act, 2000",
-          act_short: "IT Act",
-          section: "Section 43A - Compensation for failure to protect data",
-          chunk_text: "Where a body corporate, possessing, dealing or handling any sensitive personal data or information in a computer resource which it owns, controls or operates, is negligent in implementing and maintaining reasonable security practices...",
-        }
-      ]);
-    } catch (error: any) {
-      console.warn("FastAPI backend not active, running local search simulation", error.message);
-      setResults([
-        {
-          id: "law-1",
-          act_name: "Indian Penal Code, 1860",
-          act_short: "IPC",
-          section: "Section 302 - Punishment for murder",
-          chunk_text: "Whoever commits murder shall be punished with death, or imprisonment for life, and shall also be liable to fine. Murder constitutes the intentional deprivation of human life under defined parameters.",
-        },
-        {
-          id: "law-2",
-          act_name: "Indian Contract Act, 1872",
-          act_short: "ICA",
-          section: "Section 73 - Compensation for loss or damage",
-          chunk_text: "When a contract has been broken, the party who suffers by such breach is entitled to receive, from the party who has broken the contract, compensation for any loss or damage caused to him thereby.",
-        }
+      const res = await api.get("/laws");
+      setActs(res.data);
+    } catch {
+      setActs([
+        { act_name: "Indian Penal Code, 1860", act_short: "IPC", chunk_count: 142 },
+        { act_name: "Code of Criminal Procedure, 1973", act_short: "CrPC", chunk_count: 98 },
+        { act_name: "Indian Contract Act, 1872", act_short: "ICA", chunk_count: 65 },
+        { act_name: "Companies Act, 2013", act_short: "CA", chunk_count: 210 },
+        { act_name: "Indian Evidence Act, 1872", act_short: "IEA", chunk_count: 46 },
+        { act_name: "Constitution of India, 1950", act_short: "COI", chunk_count: 85 },
       ]);
     } finally {
       setLoading(false);
-      setSearched(true);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchActs();
+  }, [fetchActs]);
+
+  const handleSearch = async () => {
+    if (!query.trim()) return;
+    setLoading(true);
+    setSearched(true);
+    try {
+      const res = await api.get("/laws/search", { params: { q: query } });
+      setResults(res.data);
+    } catch {
+      setResults([]);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const acts = [
-    { name: "Indian Penal Code", short: "IPC", year: "1860", color: "#1a3a5c" },
-    { name: "Code of Criminal Procedure", short: "CrPC", year: "1973", color: "#2d1a5c" },
-    { name: "Indian Contract Act", short: "ICA", year: "1872", color: "#1a5c43" },
-    { name: "Companies Act", short: "CA", year: "2013", color: "#5c1a1a" },
-  ];
+  const displayData = searched ? results : acts;
+  const isSearchResult = searched && !query.trim();
+
+  if (loading && !refreshing) {
+    return (
+      <View className="flex-1 bg-background px-4">
+        <View className="mt-5 mb-4">
+          <Text className="text-white text-lg font-bold tracking-wide uppercase">
+            Statutory Legislation Search
+          </Text>
+        </View>
+        <View className="flex-row items-center bg-surface border border-border/50 rounded-xl px-3 py-1 mb-5">
+          <Search size={20} color="#c9a84c" className="mr-2.5" />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search laws, sections..."
+            placeholderTextColor="#5a7082"
+            className="flex-1 text-white py-3 text-[15px]"
+          />
+        </View>
+        <LoadingSpinner message="Loading legislation index..." />
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-background px-4">
       <View className="mt-5 mb-4">
         <Text className="text-white text-lg font-bold tracking-wide uppercase">
-          Statutory Legislation Search
+          Legislation
         </Text>
         <Text className="text-muted text-xs font-semibold tracking-wider mt-0.5">
-          Constitutional, Civil, & Criminal Codes of India
+          Central Indian bare acts
         </Text>
       </View>
 
-      {/* Search Bar */}
-      <View className="flex-row items-center bg-surface border border-border/50 rounded-xl px-3 py-1 mb-5 shadow-lg">
+      <View className="flex-row items-center bg-surface border border-border/50 rounded-xl px-3 py-1 mb-5">
         <Search size={20} color="#c9a84c" className="mr-2.5" />
         <TextInput
           value={query}
           onChangeText={setQuery}
           onSubmitEditing={handleSearch}
-          placeholder="Search laws, sections, e.g. breach of contract"
+          placeholder="Semantic search, e.g. breach of contract"
           placeholderTextColor="#5a7082"
+          returnKeyType="search"
           className="flex-1 text-white py-3 text-[15px]"
         />
         {query.length > 0 && (
-          <TouchableOpacity onPress={handleSearch} className="bg-primary px-3 py-1.5 rounded-lg border border-accent/20">
+          <TouchableOpacity
+            onPress={handleSearch}
+            className="bg-primary px-3 py-1.5 rounded-lg border border-accent/20"
+          >
             <Text className="text-accent text-xs font-bold uppercase tracking-wider">Search</Text>
           </TouchableOpacity>
         )}
       </View>
 
-      {loading ? (
-        <LoadingSpinner message="Searching High-Tier Legislation Index..." />
-      ) : searched ? (
+      <View className="flex-row items-center justify-between mb-3">
+        <Text className="text-muted text-xs font-bold tracking-wider uppercase">
+          {searched ? "Search Results" : "Principal Acts & Statutes"}
+        </Text>
+        {searched && (
+          <TouchableOpacity
+            onPress={() => {
+              setSearched(false);
+              setQuery("");
+            }}
+          >
+            <Text className="text-accent text-xs font-bold">Clear</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {searched && displayData.length === 0 ? (
+        <View className="items-center justify-center py-16">
+          <Scale size={32} color="#c9a84c" className="mb-3" />
+          <Text className="text-white font-bold text-base">No matches found</Text>
+          <Text className="text-muted text-sm text-center mt-1">
+            Try a different search term.
+          </Text>
+        </View>
+      ) : (
         <FlatList
-          data={results}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <LawCard law={item} />}
-          ListEmptyComponent={
-            <View className="items-center justify-center py-12">
-              <Scale size={28} color="#c9a84c" className="mb-2" />
-              <Text className="text-white font-bold">No Precedent Matches Found</Text>
-              <Text className="text-muted text-xs mt-1 text-center">Refine terms to lookup correct sections.</Text>
-            </View>
+          data={displayData}
+          keyExtractor={(item: any) =>
+            searched ? `${item.act_name}-${item.section}` : item.act_short
+          }
+          numColumns={2}
+          columnWrapperStyle={{ gap: 12 }}
+          renderItem={({ item, index }) => {
+            if (searched) {
+              const chunk = item as any;
+              return (
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  className="bg-surface border border-border/40 rounded-xl p-4 mb-3 flex-1"
+                  style={{ maxWidth: "48%" }}
+                >
+                  <Text className="text-accent font-bold text-xs uppercase tracking-wider mb-1">
+                    {chunk.act_short} S.{chunk.section}
+                  </Text>
+                  <Text className="text-white text-[13px] leading-5" numberOfLines={4}>
+                    {chunk.chunk_text}
+                  </Text>
+                </TouchableOpacity>
+              );
+            }
+            const act = item as ActSummary;
+            return (
+              <TouchableOpacity
+                key={act.act_short}
+                activeOpacity={0.8}
+                onPress={() => router.push(`/laws/${act.act_short}`)}
+                className="bg-surface border border-border/40 rounded-xl p-4 mb-3 flex-1"
+                style={{ maxWidth: "48%" }}
+              >
+                <Text className="text-accent text-2xl font-bold tracking-tight mb-1">
+                  {act.act_short}
+                </Text>
+                <Text className="text-white text-sm leading-5" numberOfLines={2}>
+                  {act.act_name}
+                </Text>
+                <Text className="text-muted text-xs mt-2 font-medium">
+                  {act.chunk_count} section{act.chunk_count !== 1 ? "s" : ""}
+                </Text>
+              </TouchableOpacity>
+            );
+          }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => {
+                setRefreshing(true);
+                setSearched(false);
+                setQuery("");
+                fetchActs(false);
+              }}
+              tintColor="#c9a84c"
+            />
           }
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 24 }}
-        />
-      ) : (
-        <View className="flex-grow">
-          {/* Statutory Acts */}
-          <Text className="text-muted text-xs font-bold tracking-wider uppercase mb-3">
-            Principal Acts & Statutes
-          </Text>
-
-          {acts.map((act) => (
-            <TouchableOpacity
-              key={act.short}
-              activeOpacity={0.8}
-              className="bg-surface border border-border/40 rounded-xl p-4 mb-3 flex-row items-center justify-between"
-            >
-              <View className="flex-row items-center flex-1 pr-3">
-                <View className="bg-primary/50 border border-accent/20 p-2.5 rounded-lg mr-3">
-                  <Landmark size={20} color="#c9a84c" />
-                </View>
+          ListFooterComponent={
+            searched ? null : (
+              <View className="bg-primary/20 border border-accent/20 rounded-xl p-4 mt-2 flex-row items-start">
+                <BookOpen size={16} color="#c9a84c" className="mr-2.5 mt-0.5" />
                 <View className="flex-1">
-                  <Text className="text-white font-semibold text-base">{act.name}</Text>
-                  <Text className="text-muted text-xs font-medium mt-0.5">
-                    Act Shortcode: {act.short} • Enacted {act.year}
+                  <Text className="text-white font-bold text-sm">
+                    AI-Powered Search
+                  </Text>
+                  <Text className="text-muted text-xs leading-5 mt-1">
+                    Search across all acts using semantic matching. Results are ranked by relevance
+                    using vector embeddings.
                   </Text>
                 </View>
               </View>
-              <ChevronRight size={18} color="#8fa3b5" />
-            </TouchableOpacity>
-          ))}
-
-          <View className="bg-primary/20 border border-accent/20 rounded-xl p-4 mt-4 flex-row items-start">
-            <BookOpen size={18} color="#c9a84c" className="mr-2.5 mt-0.5" />
-            <View className="flex-grow pr-4">
-              <Text className="text-white font-bold text-sm">Constitutional Advisory Unit</Text>
-              <Text className="text-muted text-xs leading-5 mt-1">
-                Artificial intelligence RAG systems parse semantic precedents. Connect to corporate Wi-Fi for live updates.
-              </Text>
-            </View>
-          </View>
-        </View>
+            )
+          }
+        />
       )}
     </View>
   );

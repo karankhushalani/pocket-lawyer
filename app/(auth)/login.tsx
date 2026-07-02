@@ -1,46 +1,38 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from "react-native";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { Scale, Mail, Lock, ShieldCheck } from "lucide-react-native";
-import auth from "@react-native-firebase/auth";
-import { useAuthStore } from "../../store/useAuthStore";
+import { signInWithEmail, signInWithGoogle } from "../../services/auth";
 
 export default function LoginScreen() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const setAuth = useAuthStore((state) => state.setAuth);
 
-  const handleLogin = async () => {
+  const handleGoogle = async () => {
+    setLoading(true);
+    try {
+      await signInWithGoogle();
+      router.replace("/(tabs)");
+    } catch (err: any) {
+      Alert.alert("Google Sign-In Failed", err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEmail = async () => {
     if (!email || !password) {
       Alert.alert("Required Fields", "Please enter your credentials.");
       return;
     }
-
     setLoading(true);
     try {
-      // Authenticate via native Firebase SDK
-      const credential = await auth().signInWithEmailAndPassword(email, password);
-      // subscribeToAuthChanges in root layout will handle backend sync
-    } catch (error: any) {
-      console.error(error);
-      
-      // Developer bypass for Demo/Testing in Expo Go (since Firebase Auth requires native build)
-      if (email === "demo@pocketlawyer.com" && password === "lawyer123") {
-        setAuth(
-          {
-            user_id: "demo-user-uuid",
-            email: "demo@pocketlawyer.com",
-            name: "Senior Advocate Malhotra",
-          },
-          "demo-jwt-token-id"
-        );
-      } else {
-        Alert.alert(
-          "Authentication Error",
-          error.message || "Invalid credentials. Use demo@pocketlawyer.com / lawyer123 for testing."
-        );
-      }
+      await signInWithEmail(email, password);
+      router.replace("/(tabs)");
+    } catch (err: any) {
+      Alert.alert("Authentication Error", err.message);
     } finally {
       setLoading(false);
     }
@@ -62,6 +54,25 @@ export default function LoginScreen() {
           <Text className="text-muted text-sm text-center mt-3 font-medium px-4">
             Secured, high-tier artificial intelligence legal counsel.
           </Text>
+        </View>
+
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={handleGoogle}
+          disabled={loading}
+          className="bg-surface border border-border/60 rounded-xl py-3.5 items-center flex-row justify-center mb-4 shadow-lg"
+        >
+          <Text className="text-white font-bold text-base tracking-wide mr-2">
+            {loading ? "Signing in..." : "Continue with Google"}
+          </Text>
+        </TouchableOpacity>
+
+        <View className="flex-row items-center mb-4">
+          <View className="flex-1 h-px bg-border/60" />
+          <Text className="text-muted text-xs font-bold uppercase mx-3 tracking-wider">
+            or
+          </Text>
+          <View className="flex-1 h-px bg-border/60" />
         </View>
 
         <View className="bg-surface/85 border border-border/40 rounded-2xl p-6 shadow-2xl">
@@ -107,7 +118,7 @@ export default function LoginScreen() {
 
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={handleLogin}
+            onPress={handleEmail}
             disabled={loading}
             className="bg-accent rounded-xl py-3.5 items-center shadow-lg shadow-accent/20"
           >

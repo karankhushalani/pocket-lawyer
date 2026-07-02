@@ -1,124 +1,151 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, RefreshControl, Alert } from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import { View, Text, FlatList, TouchableOpacity, RefreshControl } from "react-native";
 import { useRouter } from "expo-router";
-import { Briefcase, Filter, AlertTriangle } from "lucide-react-native";
+import { Plus, FileText, MessageSquare } from "lucide-react-native";
 import { api } from "../../services/api";
+import { useAuthStore } from "../../store/useAuthStore";
 import { Document } from "../../types";
 import { DocumentCard } from "../../components/DocumentCard";
-import { LoadingSpinner } from "../../components/LoadingSpinner";
 
-export default function ChambersHomeScreen() {
+function SkeletonCard() {
+  return (
+    <View className="bg-surface/60 border border-border/20 rounded-xl p-4 mb-4 animate-pulse">
+      <View className="h-5 bg-border/30 rounded w-3/4 mb-2" />
+      <View className="h-3 bg-border/20 rounded w-1/3 mb-3" />
+      <View className="h-3 bg-border/20 rounded w-full mb-1.5" />
+      <View className="h-3 bg-border/20 rounded w-2/3" />
+    </View>
+  );
+}
+
+export default function HomeScreen() {
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [chatCount, setChatCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const user = useAuthStore((s) => s.user);
   const router = useRouter();
 
-  const fetchDocuments = async (showLoading = true) => {
-    if (showLoading) setLoading(true);
+  const fetchData = useCallback(async (showLoader = true) => {
+    if (showLoader) setLoading(true);
     try {
-      const response = await api.get("/documents/");
-      setDocuments(response.data);
-    } catch (error: any) {
-      console.warn("Failed to fetch from backend, loading premium demo briefs", error.message);
-      
-      // Load Premium Mock Briefs on Connection Failure
-      setDocuments([
-        {
-          id: "doc-1",
-          title: "Shareholders Agreement - Tata Group & Softbank",
-          file_url: "https://example.com/brief1.pdf",
-          file_type: "pdf",
-          document_type: "agreement",
-          jurisdiction: "india",
-          summary: "This document outlines the Series C funding conditions, liquidation preferences, voting covenants, and dispute mitigation parameters between Tata Group and SoftBank Ventures.",
-          created_at: new Date().toISOString(),
-        },
-        {
-          id: "doc-2",
-          title: "Legal Notice of Intellectual Property Breach",
-          file_url: "https://example.com/brief2.pdf",
-          file_type: "pdf",
-          document_type: "notice",
-          jurisdiction: "india",
-          summary: "An official demand letter alleging unauthorised deployment of trademarked cryptographic software assets, outlining mandatory cease & desist guidelines.",
-          created_at: new Date(Date.now() - 86400000).toISOString(),
-        },
-        {
-          id: "doc-3",
-          title: "Non-Disclosure Covenants - Reliance Jio Infocomm",
-          file_url: "https://example.com/brief3.pdf",
-          file_type: "pdf",
-          document_type: "contract",
-          jurisdiction: "india",
-          summary: "Covenants governing mutual trade secret protections, high-tier encryption sharing, and proprietary 5G radio network infrastructure access guidelines.",
-          created_at: new Date(Date.now() - 172800000).toISOString(),
-        }
+      const [docRes, chatRes] = await Promise.all([
+        api.get("/documents/"),
+        api.get("/chat/messages").catch(() => ({ data: [] as any[] })),
       ]);
+      setDocuments(docRes.data);
+      setChatCount(chatRes.data.length);
+    } catch {
+      setDocuments([]);
+      setChatCount(0);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchDocuments();
-  }, []);
+    fetchData();
+  }, [fetchData]);
 
   const handleRefresh = () => {
     setRefreshing(true);
-    fetchDocuments(false);
+    fetchData(false);
   };
 
-  const handleDocumentPress = (doc: Document) => {
-    router.push({
-      pathname: `/document/${doc.id}`,
-      params: { title: doc.title, jurisdiction: doc.jurisdiction },
-    });
-  };
-
-  if (loading) {
-    return <LoadingSpinner message="Consulting database..." />;
-  }
+  const avatarLetter = user?.name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || "?";
 
   return (
-    <View className="flex-1 bg-background px-4">
-      {/* Premium Header Accent */}
-      <View className="flex-row items-center justify-between mt-5 mb-4">
-        <View className="flex-row items-center">
-          <Briefcase size={20} color="#c9a84c" className="mr-2" />
-          <Text className="text-white text-lg font-bold tracking-wider uppercase">
-            Active Briefcases
-          </Text>
-        </View>
-        <TouchableOpacity className="bg-surface/60 border border-border/55 rounded-lg px-3 py-1.5 flex-row items-center">
-          <Filter size={14} color="#8fa3b5" className="mr-1.5" />
-          <Text className="text-muted text-xs font-bold uppercase tracking-wider">Filter</Text>
+    <View className="flex-1 bg-background">
+      <View className="px-4 pt-5 pb-3 flex-row items-center justify-between border-b border-border/30">
+        <Text className="text-white text-xl font-bold tracking-widest">Pocket Lawyer</Text>
+        <TouchableOpacity
+          onPress={() => router.push("/(tabs)/profile")}
+          className="bg-primary/50 border border-accent/30 w-9 h-9 rounded-full items-center justify-center"
+        >
+          <Text className="text-accent font-bold text-sm">{avatarLetter}</Text>
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={documents}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <DocumentCard document={item} onPress={() => handleDocumentPress(item)} />
-        )}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#c9a84c" />
-        }
-        ListEmptyComponent={
-          <View className="items-center justify-center py-20 px-6">
-            <AlertTriangle size={36} color="#c9a84c" className="mb-3" />
-            <Text className="text-white font-bold text-center text-lg tracking-wide">
-              No Document Records Found
-            </Text>
-            <Text className="text-muted text-center text-sm mt-2 leading-5">
-              Navigate to the Ingestion tab to import corporate PDFs and establish vector-similarity briefs.
-            </Text>
+      {loading && documents.length === 0 ? (
+        <View className="flex-1 px-4 pt-4">
+          <View className="flex-row gap-3 mb-5">
+            <View className="flex-1 bg-surface/60 border border-border/20 rounded-xl p-4">
+              <View className="h-7 bg-border/20 rounded w-12 mb-2" />
+              <View className="h-3 bg-border/20 rounded w-20" />
+            </View>
+            <View className="flex-1 bg-surface/60 border border-border/20 rounded-xl p-4">
+              <View className="h-7 bg-border/20 rounded w-12 mb-2" />
+              <View className="h-3 bg-border/20 rounded w-20" />
+            </View>
           </View>
-        }
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 24 }}
-      />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </View>
+      ) : (
+        <FlatList
+          data={documents}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <DocumentCard
+              id={item.id}
+              title={item.title}
+              document_type={item.document_type}
+              summary={item.summary}
+              created_at={item.created_at}
+              risk_flag_count={item.risk_flags?.length ?? 0}
+            />
+          )}
+          ListHeaderComponent={
+            <View className="flex-row gap-3 px-4 pt-4 pb-2">
+              <View className="flex-1 bg-surface/80 border border-border/40 rounded-xl p-4 shadow-lg">
+                <View className="flex-row items-center gap-2 mb-1">
+                  <FileText size={16} color="#c9a84c" />
+                  <Text className="text-muted text-[11px] font-bold uppercase tracking-wider">
+                    Documents
+                  </Text>
+                </View>
+                <Text className="text-white text-2xl font-bold">{documents.length}</Text>
+              </View>
+              <View className="flex-1 bg-surface/80 border border-border/40 rounded-xl p-4 shadow-lg">
+                <View className="flex-row items-center gap-2 mb-1">
+                  <MessageSquare size={16} color="#c9a84c" />
+                  <Text className="text-muted text-[11px] font-bold uppercase tracking-wider">
+                    Chats
+                  </Text>
+                </View>
+                <Text className="text-white text-2xl font-bold">{chatCount}</Text>
+              </View>
+            </View>
+          }
+          ListEmptyComponent={
+            <View className="items-center justify-center px-8 pt-16">
+              <FileText size={40} color="#c9a84c" className="mb-4" />
+              <Text className="text-white font-bold text-lg text-center">
+                No documents yet
+              </Text>
+              <Text className="text-muted text-sm text-center mt-2 leading-5">
+                Tap + to analyze your first legal document.
+              </Text>
+            </View>
+          }
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#c9a84c" />
+          }
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 96 }}
+          className="flex-1 px-4"
+        />
+      )}
+
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={() => router.push("/(tabs)/upload")}
+        className="absolute bottom-8 right-6 bg-accent w-14 h-14 rounded-full items-center justify-center shadow-xl shadow-accent/30"
+      >
+        <Plus size={28} color="#0f1923" />
+      </TouchableOpacity>
     </View>
   );
 }

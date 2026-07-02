@@ -1,48 +1,49 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from "react-native";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { Scale, Mail, Lock, User, ShieldCheck } from "lucide-react-native";
 import auth from "@react-native-firebase/auth";
 import { useAuthStore } from "../../store/useAuthStore";
+import { api } from "../../services/api";
 
 export default function RegisterScreen() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const setUser = useAuthStore((state) => state.setUser);
 
   const handleRegister = async () => {
     if (!name || !email || !password) {
       Alert.alert("Required Fields", "Please populate all inputs.");
       return;
     }
-
     setLoading(true);
     try {
       const credential = await auth().createUserWithEmailAndPassword(email, password);
       if (credential.user) {
         await credential.user.updateProfile({ displayName: name });
       }
+      const firebaseUser = auth().currentUser;
+      if (!firebaseUser) throw new Error("User creation failed");
+
+      const token = await firebaseUser.getIdToken();
+      await api.post(
+        "/auth/register",
+        { name, email },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      await setUser({
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        name,
+        token,
+      });
+      router.replace("/(tabs)");
     } catch (error: any) {
-      console.error(error);
-      
-      // Fallback bypass for Demo/Testing
-      if (email.endsWith("@pocketlawyer.com")) {
-        setAuth(
-          {
-            user_id: "demo-user-uuid",
-            email: email,
-            name: name,
-          },
-          "demo-jwt-token-id"
-        );
-      } else {
-        Alert.alert(
-          "Registration Failed",
-          error.message || "Ensure credentials match rules or use an @pocketlawyer.com email to bypass."
-        );
-      }
+      Alert.alert("Registration Failed", error.message);
     } finally {
       setLoading(false);
     }

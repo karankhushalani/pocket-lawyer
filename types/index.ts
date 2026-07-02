@@ -12,6 +12,8 @@ export interface Document {
   document_type: string | null;
   jurisdiction: string;
   summary: string | null;
+  risk_flags: string[] | null;
+  key_clauses: Array<{ heading: string; summary: string; risk_level: string }> | null;
   created_at: string;
 }
 
@@ -20,6 +22,7 @@ export interface ChatMessage {
   document_id: string | null;
   role: "user" | "assistant";
   content: string;
+  sources?: Array<{ act_name: string; section: string }>;
   created_at: string;
 }
 
