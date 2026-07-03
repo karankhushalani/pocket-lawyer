@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, FlatList, TouchableOpacity, RefreshControl } from "react-native";
 import { useRouter } from "expo-router";
-import { Plus, FileText, MessageSquare } from "lucide-react-native";
+import { Plus, FileText } from "lucide-react-native";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useDocuments } from "../../hooks/useQueries";
 import { DocumentCard } from "../../components/DocumentCard";
@@ -23,7 +23,6 @@ export default function HomeScreen() {
   const user = useAuthStore((s) => s.user);
   const router = useRouter();
   const avatarLetter = user?.name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || "?";
-  const chatCount = 0;
 
   return (
     <View className="flex-1 bg-background">
@@ -78,15 +77,7 @@ export default function HomeScreen() {
                 </View>
                 <Text className="text-white text-2xl font-bold">{documents.length}</Text>
               </View>
-              <View className="flex-1 bg-surface/80 border border-border/40 rounded-xl p-4 shadow-lg">
-                <View className="flex-row items-center gap-2 mb-1">
-                  <MessageSquare size={16} color="#c9a84c" />
-                  <Text className="text-muted text-[11px] font-bold uppercase tracking-wider">
-                    Chats
-                  </Text>
-                </View>
-                <Text className="text-white text-2xl font-bold">{chatCount}</Text>
-              </View>
+
             </View>
           }
           ListEmptyComponent={

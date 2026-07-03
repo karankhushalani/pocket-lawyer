@@ -57,6 +57,7 @@ export function useLawSearch(query: string) {
         act_name: string;
         section: string;
         chunk_text: string;
+        similarity: number;
       }>;
     },
     enabled: !!query.trim(),

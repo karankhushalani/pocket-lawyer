@@ -5,7 +5,7 @@ import auth from "@react-native-firebase/auth";
 import { useAuthStore } from "../../store/useAuthStore";
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuthStore();
+  const { user, clearUser } = useAuthStore();
 
   const handleLogout = async () => {
     Alert.alert(
@@ -22,7 +22,7 @@ export default function ProfileScreen() {
             } catch (error) {
               console.warn("Local session termination initiated", error);
             } finally {
-              logout();
+              clearUser();
             }
           },
         },

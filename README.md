@@ -25,7 +25,7 @@ Built with React Native (Expo) and backed by the [Pocket Lawyer API](https://git
 |--------|-------|-------------|
 | **Home** | `/(tabs)` | Document dashboard with stats, FAB for upload |
 | **Upload** | `/(tabs)/upload` | Upload PDF/image, AI extracts clauses & flags risks |
-| **Laws** | `/(tabs)/laws` | Full-text search of 22 Indian bare acts with semantic search |
+| **Laws** | `/(tabs)/laws` | Full-text search of 40+ Indian bare acts with semantic search |
 | **Document Chat** | `/document/[id]` | Chat with AI about a specific uploaded document |
 | **Laws Detail** | `/laws/[act_short]` | Browse sections of an act with expandable cards |
 | **Login** | `/(auth)/login` | Google Sign-In or email/password |

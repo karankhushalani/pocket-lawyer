@@ -7,7 +7,6 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
   Modal,
   ScrollView,
   Dimensions,
@@ -39,6 +38,26 @@ const SUGGESTED_QUESTIONS = [
   "Summarize in simple terms",
   "Is this enforceable in India?",
 ];
+
+function TypingIndicator({ sending, dotOpacity }: { sending: boolean; dotOpacity: Animated.Value }) {
+  if (!sending) return null;
+  return (
+    <View className="flex-row items-center py-3 pl-1">
+      <View className="bg-primary border border-accent/20 p-1.5 rounded-full mr-2">
+        <Scale size={14} color="#c9a84c" />
+      </View>
+      <View className="bg-surface border border-border/40 rounded-2xl rounded-tl-none px-4 py-3 flex-row gap-1.5">
+        {[0, 1, 2].map((i) => (
+          <Animated.View
+            key={i}
+            style={{ opacity: dotOpacity }}
+            className="w-2 h-2 rounded-full bg-accent"
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
 
 export default function DocumentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -107,11 +126,8 @@ export default function DocumentDetailScreen() {
         document_id: id ?? null,
         role: "assistant",
         content:
-          "**Section 73 of the Indian Contract Act, 1872** applies here.\n\nThe clause regarding force majeure appears insufficiently scoped.\n\n- Add specific pandemic language\n- Cover regulatory change events\n- Include supply-chain disruption",
-        sources: [
-          { act_name: "Indian Contract Act, 1872", section: "73" },
-          { act_name: "Indian Penal Code", section: "302" },
-        ],
+          "I'm sorry, I'm unable to reach my reasoning engine right now. Please check your connection and try again.",
+        sources: [],
         created_at: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, fallback]);
@@ -137,26 +153,6 @@ export default function DocumentDetailScreen() {
     loop.start();
     return () => loop.stop();
   }, [sending]);
-
-  function TypingIndicator() {
-    if (!sending) return null;
-    return (
-      <View className="flex-row items-center py-3 pl-1">
-        <View className="bg-primary border border-accent/20 p-1.5 rounded-full mr-2">
-          <Scale size={14} color="#c9a84c" />
-        </View>
-        <View className="bg-surface border border-border/40 rounded-2xl rounded-tl-none px-4 py-3 flex-row gap-1.5">
-          {[0, 1, 2].map((i) => (
-            <Animated.View
-              key={i}
-              style={{ opacity: dotOpacity }}
-              className="w-2 h-2 rounded-full bg-accent"
-            />
-          ))}
-        </View>
-      </View>
-    );
-  }
 
   if (docLoading || historyLoading) return <LoadingSpinner message="Retrieving brief..." />;
 
@@ -245,7 +241,7 @@ export default function DocumentDetailScreen() {
             subtitle="Ask anything about this document. Lex will cite relevant statutes and flag risks."
           />
         }
-        ListFooterComponent={<TypingIndicator />}
+        ListFooterComponent={<TypingIndicator sending={sending} dotOpacity={dotOpacity} />}
       />
 
       {messages.length === 0 && (

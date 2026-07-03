@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import auth from "@react-native-firebase/auth";
-import { User } from "../types";
 
 const STORAGE_KEY = "@pocket-lawyer/auth-user";
 

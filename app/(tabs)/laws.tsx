@@ -50,7 +50,6 @@ export default function LegislationScreen() {
   };
 
   const displayData = searched ? results : acts;
-  const isSearchResult = searched && !query.trim();
 
   const loading = actsLoading || searchLoading;
   if (loading && !isRefetching) {
@@ -136,16 +135,16 @@ export default function LegislationScreen() {
           keyExtractor={(item: any) =>
             searched ? `${item.act_name}-${item.section}` : item.act_short
           }
-          numColumns={2}
-          columnWrapperStyle={{ gap: 12 }}
-          renderItem={({ item, index }) => {
+          numColumns={searched ? 1 : 2}
+          columnWrapperStyle={searched ? undefined : { gap: 12 }}
+          renderItem={({ item }) => {
             if (searched) {
               const chunk = item as any;
               return (
                 <TouchableOpacity
                   activeOpacity={0.8}
                   className="bg-surface border border-border/40 rounded-xl p-4 mb-3 flex-1"
-                  style={{ maxWidth: "48%" }}
+                  style={searched ? {} : { maxWidth: "48%" }}
                 >
                   <Text className="text-accent font-bold text-xs uppercase tracking-wider mb-1">
                     {chunk.act_short} S.{chunk.section}
